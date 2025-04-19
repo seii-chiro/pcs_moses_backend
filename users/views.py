@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .serializers import CustomUserSerializer
+from .serializers import CustomUserSerializer, CustomUserUpdateSerializer
 
 # Create your views here.
 
@@ -12,3 +12,11 @@ class MeView(APIView):
     def get(self, request):
         serializer = CustomUserSerializer(request.user)
         return Response(serializer.data)
+
+    def patch(self, request):
+        serializer = CustomUserUpdateSerializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(CustomUserSerializer(request.user).data)

@@ -16,7 +16,6 @@ class UserStatus(Enum):
 
 # Custom user model
 class CustomUser(AbstractUser):
-    national_id = models.CharField(max_length=20, unique=True)
     is_voter = models.BooleanField(default=False)
 
     status = models.CharField(
@@ -31,9 +30,6 @@ class CustomUser(AbstractUser):
     month_year_entered = models.CharField(max_length=7, null=True, blank=True)
     anniversary_month = models.CharField(max_length=3, null=True, blank=True) 
     title = models.CharField(max_length=20)
-    surname = models.CharField(max_length=100)
-    first_name = models.CharField(max_length=100)
-    email_address = models.EmailField(null=True, blank=True)
     member = models.BooleanField(default=True)
     remarks = models.TextField(blank=True, null=True)
     allow_proxy = models.BooleanField(default=False)
@@ -55,4 +51,4 @@ class CustomUser(AbstractUser):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.title} {self.first_name} {self.surname}'
+        return f'{self.title} {self.first_name} {self.last_name}'
