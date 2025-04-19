@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from enum import Enum
 
 # User status enum
+
+
 class UserStatus(Enum):
     NEW = "NEW"
     BALIK_PCS = "BALIK_PCS"
@@ -15,6 +17,8 @@ class UserStatus(Enum):
         return [(tag.value, tag.value) for tag in cls]
 
 # Custom user model
+
+
 class CustomUser(AbstractUser):
     is_voter = models.BooleanField(default=False)
 
@@ -23,12 +27,14 @@ class CustomUser(AbstractUser):
         choices=UserStatus.choices(),
         default=UserStatus.NEW.value,
     )
-
+    middle_name = models.CharField(max_length=50, null=True, blank=True)
     date_paid_billed = models.DateField(null=True, blank=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    partner_or_individual = models.CharField(max_length=50, null=True, blank=True)
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True)
+    partner_or_individual = models.CharField(
+        max_length=50, null=True, blank=True)
     month_year_entered = models.CharField(max_length=7, null=True, blank=True)
-    anniversary_month = models.CharField(max_length=3, null=True, blank=True) 
+    anniversary_month = models.CharField(max_length=3, null=True, blank=True)
     title = models.CharField(max_length=20)
     member = models.BooleanField(default=True)
     remarks = models.TextField(blank=True, null=True)
@@ -44,7 +50,7 @@ class CustomUser(AbstractUser):
         choices=Role.choices,
         default=Role.VOTER,
     )
-    
+
     def save(self, *args, **kwargs):
         if self.pk and self.password:  # Check if the password is set and if the user already exists
             self.set_password(self.password)  # Hash the password before saving

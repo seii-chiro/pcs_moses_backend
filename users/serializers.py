@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from .models import CustomUser
 
+
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
@@ -10,17 +11,54 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
 
+
 class CustomUserUpdateSerializer(serializers.ModelSerializer):
+    current_password = serializers.CharField(write_only=True, required=False)
+    new_password = serializers.CharField(write_only=True, required=False)
+    confirm_password = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = CustomUser
         exclude = ['date_joined', 'last_login']
-        
+
+    def to_internal_value(self, data):
+        # includes declared + model fields
+        allowed_fields = set(self.fields.keys())
+        filtered = {key: value for key,
+                    value in data.items() if key in allowed_fields}
+        return super().to_internal_value(filtered)
+
+    def validate(self, data):
+        user = self.instance
+
+        current = data.get("current_password")
+        new = data.get("new_password")
+        confirm = data.get("confirm_password")
+
+        # Password update logic
+        if any([current, new, confirm]):
+            if not user.check_password(current or ''):
+                raise serializers.ValidationError(
+                    {"current_password": "Current password is incorrect."})
+            if new != confirm:
+                raise serializers.ValidationError(
+                    {"confirm_password": "Passwords do not match."})
+            if new and len(new) < 8:
+                raise serializers.ValidationError(
+                    {"new_password": "Password must be at least 8 characters long."})
+
+        return data
 
     def update(self, instance, validated_data):
-        password = validated_data.pop('password', None)
+        validated_data.pop("current_password", None)
+        new_password = validated_data.pop("new_password", None)
+        validated_data.pop("confirm_password", None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        if password:
-            instance.set_password(password)
+
+        if new_password:
+            instance.set_password(new_password)
+
         instance.save()
         return instance
