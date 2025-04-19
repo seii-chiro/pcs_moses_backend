@@ -36,16 +36,20 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
         confirm = data.get("confirm_password")
 
         # Password update logic
-        if any([current, new, confirm]):
-            if not user.check_password(current or ''):
+        if current or new or confirm:  # Check if any of the password fields are present
+            # Validate current password
+            if not current or not user.check_password(current):
                 raise serializers.ValidationError(
-                    {"current_password": "Current password is incorrect."})
-            if new != confirm:
+                    {"current_password": "Current password is incorrect."}
+                )
+            if new != confirm:  # Ensure new and confirm passwords match
                 raise serializers.ValidationError(
-                    {"confirm_password": "Passwords do not match."})
-            if new and len(new) < 8:
+                    {"confirm_password": "Passwords do not match."}
+                )
+            if new and len(new) < 8:  # Password length validation
                 raise serializers.ValidationError(
-                    {"new_password": "Password must be at least 8 characters long."})
+                    {"new_password": "Password must be at least 8 characters long."}
+                )
 
         return data
 

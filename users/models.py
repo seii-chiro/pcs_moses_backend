@@ -52,8 +52,9 @@ class CustomUser(AbstractUser):
     )
 
     def save(self, *args, **kwargs):
-        if self.pk and self.password:  # Check if the password is set and if the user already exists
-            self.set_password(self.password)  # Hash the password before saving
+        # Check if the password is not hashed and only then hash it
+        if self.pk and self.password and not self.password.startswith('pbkdf2'):
+            self.set_password(self.password)
         super().save(*args, **kwargs)
 
     def __str__(self):
