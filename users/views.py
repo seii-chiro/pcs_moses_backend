@@ -138,7 +138,7 @@ def accept_proxy(request):
 
 @api_view(['POST'])
 def reject_proxy(request):
-    user = request.user
+    user = request.user  # The proxy user
     requester_id = request.data.get('requester_id')
 
     try:
@@ -146,12 +146,25 @@ def reject_proxy(request):
     except CustomUser.DoesNotExist:
         return Response({"error": "Requester not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    original_len = len(requester.requested_proxy)
-    requester.requested_proxy = [r for r in requester.requested_proxy if not (
-        r['user_id'] == user.id and r['status'] == 'pending')]
+    original_len_requester = len(requester.requested_proxy)
+    original_len_user = len(user.received_proxy_requests)
 
-    if len(requester.requested_proxy) == original_len:
+    # Remove from requester's list
+    requester.requested_proxy = [
+        r for r in requester.requested_proxy
+        if not (r['user_id'] == user.id and r['status'] == 'pending')
+    ]
+
+    # Remove from proxy's (user's) list
+    user.received_proxy_requests = [
+        r for r in user.received_proxy_requests
+        if not (r['user_id'] == requester.id and r['status'] == 'pending')
+    ]
+
+    if len(requester.requested_proxy) == original_len_requester and len(user.received_proxy_requests) == original_len_user:
         return Response({"error": "No pending request found to reject."}, status=status.HTTP_400_BAD_REQUEST)
 
     requester.save()
+    user.save()
+
     return Response({"message": "Proxy request rejected."}, status=status.HTTP_200_OK)
