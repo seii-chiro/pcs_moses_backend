@@ -59,6 +59,7 @@ class CustomUser(AbstractUser):
     record_status_id = models.IntegerField(default=1)
     proxy_id = models.IntegerField(null=True, blank=True)
     is_accepted = models.BooleanField(default=False)
+    image_base64 = models.TextField(null=True, blank=True)
 
     # class Role(models.TextChoices):
     #     ADMIN = "admin", "Admin"
