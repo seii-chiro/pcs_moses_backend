@@ -69,7 +69,25 @@ class CustomUser(AbstractUser):
     #     default=Role.VOTER,
     # )
 
+    # def save(self, *args, **kwargs):
+    #     # Generate full_name if not provided
+    #     if not self.full_name and (self.first_name or self.last_name):
+    #         title_part = f"{self.title} " if self.title else ""
+    #         first_part = f"{self.first_name} " if self.first_name else ""
+    #         middle_initial = f"{self.middle_name[0]}. " if self.middle_name else ""
+    #         self.full_name = f"{title_part}{first_part}{middle_initial}{self.last_name}".strip(
+    #         )
+
+    #     # Check if the password is not hashed and only then hash it
+    #     if self.pk and self.password and not self.password.startswith('pbkdf2'):
+    #         self.set_password(self.password)
+
+    #     super().save(*args, **kwargs)
+
     def save(self, *args, **kwargs):
+        # Extract update_password parameter or default to True
+        update_password = kwargs.pop('update_password', True)
+
         # Generate full_name if not provided
         if not self.full_name and (self.first_name or self.last_name):
             title_part = f"{self.title} " if self.title else ""
@@ -79,7 +97,7 @@ class CustomUser(AbstractUser):
             )
 
         # Check if the password is not hashed and only then hash it
-        if self.pk and self.password and not self.password.startswith('pbkdf2'):
+        if update_password and self.pk and self.password and not self.password.startswith('pbkdf2') and not self.password.startswith('argon2'):
             self.set_password(self.password)
 
         super().save(*args, **kwargs)

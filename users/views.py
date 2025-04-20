@@ -34,7 +34,7 @@ class MeView(APIView):
 @api_view(['GET'])
 def get_all_voters(request):
     # Filter users who have the 'voter' role
-    voters = CustomUser.objects.filter(role=CustomUser.Role.VOTER)
+    voters = CustomUser.objects.filter(role__id__in=[3, 4, 5, 6])
     serializer = CustomUserSerializer(
         voters, many=True)  # Serialize filtered users
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -45,6 +45,7 @@ def get_all_voters(request):
 def request_proxy(request):
     user = request.user  # The requester
     proxy_id = request.data.get('proxy_id')
+    reason = request.data.get('reason')
     try:
         proxy_user = CustomUser.objects.get(id=proxy_id)  # The proxy user
     except CustomUser.DoesNotExist:
@@ -65,7 +66,8 @@ def request_proxy(request):
         "middle_name": proxy_user.middle_name,
         "last_name": proxy_user.last_name,
         "status": "pending",
-        "date_assigned": current_datetime
+        "date_assigned": current_datetime,
+        "reason": reason
     })
     user.save()
 
@@ -76,7 +78,8 @@ def request_proxy(request):
         "middle_name": user.middle_name,
         "last_name": user.last_name,
         "status": "pending",
-        "date_assigned": current_datetime
+        "date_assigned": current_datetime,
+        "reason": reason
     })
     proxy_user.save()
 
