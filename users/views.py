@@ -51,8 +51,8 @@ def request_proxy(request):
     except CustomUser.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    if len(user.requested_proxy) >= 2:
-        return Response({"error": "You can only request up to 2 proxies."}, status=status.HTTP_400_BAD_REQUEST)
+    if len(user.requested_proxy) >= 1:
+        return Response({"error": "You can only request up to 1 proxy."}, status=status.HTTP_400_BAD_REQUEST)
 
     if any(req['user_id'] == proxy_id for req in user.requested_proxy):
         return Response({"error": "Proxy already requested."}, status=status.HTTP_400_BAD_REQUEST)
