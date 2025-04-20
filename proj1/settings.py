@@ -60,6 +60,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'proj1.urls'
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -133,13 +140,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',  
-        'rest_framework.authentication.BasicAuthentication',  
-        # 'rest_framework.authentication.SessionAuthentication',  
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
     ],
-#     'DEFAULT_PERMISSION_CLASSES': [
-#         'rest_framework.permissions.IsAuthenticated',
-#     ],
+    #     'DEFAULT_PERMISSION_CLASSES': [
+    #         'rest_framework.permissions.IsAuthenticated',
+    #     ],
 }
 
 CORS_ALLOWED_ORIGINS = [
