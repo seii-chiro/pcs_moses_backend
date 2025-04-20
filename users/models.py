@@ -40,30 +40,23 @@ class UserStatus(Enum):
 
 # Custom user model
 class CustomUser(AbstractUser):
-    is_voter = models.BooleanField(default=False)
-
-    status = models.CharField(
-        max_length=20,
-        choices=UserStatus.choices(),
-        default=UserStatus.NEW.value,
-    )
-    middle_name = models.CharField(max_length=50, null=True, blank=True)
-    date_paid_billed = models.DateField(null=True, blank=True)
-    amount = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True)
-    partner_or_individual = models.CharField(
-        max_length=50, null=True, blank=True)
-    month_year_entered = models.CharField(max_length=7, null=True, blank=True)
-    anniversary_month = models.CharField(max_length=3, null=True, blank=True)
+    full_name = models.CharField(max_length=255, null=True, blank=True)
     title = models.CharField(max_length=20)
-    member = models.BooleanField(default=True)
-    remarks = models.TextField(blank=True, null=True)
+    middle_name = models.CharField(max_length=50, null=True, blank=True)
     allow_proxy = models.BooleanField(default=False)
     requested_proxy = models.JSONField(default=list, blank=True)
     received_proxy_requests = models.JSONField(default=list, blank=True)
-    reason = models.CharField(max_length=255, null=True, blank=True)
+    voted_at = models.DateTimeField(null=True, blank=True)
+    voted_longitude = models.FloatField(null=True, blank=True)
+    voted_latitude = models.FloatField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
     role = models.ForeignKey(
         Role, on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.CharField(max_length=50, default="system")
+    updated_by = models.CharField(max_length=50, default="system")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    record_status_id = models.IntegerField(default=1)
 
     # class Role(models.TextChoices):
     #     ADMIN = "admin", "Admin"
@@ -77,14 +70,23 @@ class CustomUser(AbstractUser):
     # )
 
     def save(self, *args, **kwargs):
+        # Generate full_name if not provided
+        if not self.full_name and (self.first_name or self.last_name):
+            title_part = f"{self.title} " if self.title else ""
+            first_part = f"{self.first_name} " if self.first_name else ""
+            middle_initial = f"{self.middle_name[0]}. " if self.middle_name else ""
+            self.full_name = f"{title_part}{first_part}{middle_initial}{self.last_name}".strip(
+            )
+
         # Check if the password is not hashed and only then hash it
         if self.pk and self.password and not self.password.startswith('pbkdf2'):
             self.set_password(self.password)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.title} {self.first_name} {self.last_name}'
 
     def has_max_accepted_proxies(self):
-        """Returns True if the user has 2 accepted proxies, otherwise False."""
+        """Returns True if the user has 1 accepted proxy, otherwise False."""
         return len([p for p in self.requested_proxy if p.get('status') == 'accepted']) >= 1
