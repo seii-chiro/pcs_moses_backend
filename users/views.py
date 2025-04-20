@@ -101,25 +101,34 @@ def accept_proxy(request):
     accepted = [
         r for r in requester.requested_proxy if r['status'] == 'accepted']
     if len(accepted) >= 1:
-        return Response({"error": "Requester already have accepted a proxy."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Requester already has an accepted proxy."}, status=status.HTTP_400_BAD_REQUEST)
 
-    updated = False
+    updated_requester = False
+    updated_user = False
+
+    # Update the requester's record
     for req in requester.requested_proxy:
         if req['user_id'] == user.id and req['status'] == 'pending':
-            # Set status to "accepted" when the request is accepted
             req['status'] = 'accepted'
-            updated = True
-            # If reason is provided, update the reason field for the requester
+            updated_requester = True
             if reason:
                 requester.reason = reason
             break
 
-    if not updated:
+    # Update the proxy user's record
+    for req in user.received_proxy_requests:
+        if req['user_id'] == requester.id and req['status'] == 'pending':
+            req['status'] = 'accepted'
+            updated_user = True
+            break
+
+    if not (updated_requester and updated_user):
         return Response({"error": "No matching pending request found."}, status=status.HTTP_400_BAD_REQUEST)
 
     requester.save()
+    user.save()
 
-    # If requester now has 2 accepted proxies, set allow_proxy = False
+    # If requester now has 1 accepted proxy, lock further requests
     if len([r for r in requester.requested_proxy if r['status'] == 'accepted']) == 1:
         requester.allow_proxy = False
         requester.save()
