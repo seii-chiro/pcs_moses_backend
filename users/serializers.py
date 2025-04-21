@@ -1,14 +1,32 @@
 # users/serializers.py
 from rest_framework import serializers
+
+from voting.models import Vote
 from .models import CustomUser
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    vote_status = serializers.SerializerMethodField(read_only=True)
+
+
     class Meta:
         model = CustomUser
         exclude = ['password', 'date_joined', 'last_login']
         extra_kwargs = {
             'password': {'write_only': True}
+        }
+
+    def get_vote_status(self, obj):
+        # Count votes cast directly by the user
+        total_votes = Vote.objects.filter(voter_id=obj.id).count()
+
+        # Count votes cast by this user on behalf of others (as a proxy)
+        proxied_votes = Vote.objects.filter(proxy_for_voter_id=obj.id).count()
+
+        return {
+            "status": "Voted" if total_votes > 0 else "Not Voted",
+            "total_votes": total_votes,
+            "proxied_user_votes": proxied_votes
         }
 
 

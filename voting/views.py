@@ -24,9 +24,28 @@ def create_vote(request):
 
         # Check if the election is open
         now = timezone.now()
-        if not (election.poll_open_at and election.poll_closed_at and election.poll_open_at <= now < election.poll_closed_at):
+
+        if not (election.voting_start and election.voting_end):
             return Response(
-                {"error": "Voting is currently closed. Please check the election schedule."},
+                {"error": "Voting schedule is not properly configured. Please contact the election committee."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        if now < election.voting_start:
+            time_until_open = election.voting_start - now
+            hours, remainder = divmod(int(time_until_open.total_seconds()), 3600)
+            minutes = remainder // 60
+            return Response(
+                {"error": f"Voting has not started yet. It will open in {hours} hour(s) and {minutes} minute(s)."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if now >= election.voting_end:
+            time_since_closed = now - election.voting_end
+            hours, remainder = divmod(int(time_since_closed.total_seconds()), 3600)
+            minutes = remainder // 60
+            return Response(
+                {"error": f"Voting has ended. It closed {hours} hour(s) and {minutes} minute(s) ago."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
