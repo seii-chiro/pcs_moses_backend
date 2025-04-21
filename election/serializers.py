@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Election, Position, Candidate, Role, Committee
-from django.utils import timezone
-
+from datetime import datetime
+from django.utils.timezone import make_aware, is_naive, now as timezone_now
 
 class ElectionSerializer(serializers.ModelSerializer):
     is_open = serializers.SerializerMethodField(read_only=True)
@@ -12,13 +12,29 @@ class ElectionSerializer(serializers.ModelSerializer):
         read_only_fields = ['is_open']
 
     def get_is_open(self, obj):
-        now = timezone.now()
-        return (
-            obj.voting_start is not None and
-            obj.voting_end is not None and
-            obj.voting_start <= now < obj.voting_end
-        )
+        now = timezone_now()
 
+        voting_start = obj.voting_start
+        voting_end = obj.voting_end
+
+        if isinstance(voting_start, str):
+            try:
+                voting_start = datetime.strptime(voting_start, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return False
+
+        if isinstance(voting_end, str):
+            try:
+                voting_end = datetime.strptime(voting_end, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return False
+
+        if is_naive(voting_start):
+            voting_start = make_aware(voting_start)
+        if is_naive(voting_end):
+            voting_end = make_aware(voting_end)
+
+        return voting_start <= now < voting_end
 
 class PositionSerializer(serializers.ModelSerializer):
     class Meta:
