@@ -2,6 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+
+from users.serializers import CustomUserSerializer
 from .models import Vote
 from .serializers import VoteSerializer
 from users.models import CustomUser
@@ -84,6 +86,118 @@ def create_vote(request):
             )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response(
+            {"error": "An unexpected error occurred.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_requested_proxy(request):
+    try:
+        voter_data = request.data
+
+        if not isinstance(voter_data, list):
+            return Response({"error": "Request body must be a list of voter ID objects."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        proxy_requests = user.received_proxy_requests or []
+
+        # Extract requested voter IDs from received_proxy_requests
+        requested_ids = {item['id'] for item in proxy_requests if 'id' in item}
+
+        # Extract voter IDs from request
+        incoming_ids = {item['id'] for item in voter_data if 'id' in item}
+
+        # Validate all incoming IDs exist in received_proxy_requests
+        if not incoming_ids.issubset(requested_ids):
+            return Response(
+                {"error": "One or more voter IDs are not found in your received proxy requests."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if assigning would exceed max of 2 proxy relationships
+        current_proxy_count = CustomUser.objects.filter(proxy_id=user.id).count()
+        if current_proxy_count + len(incoming_ids) > 2:
+            return Response(
+                {"error": f"You can only be assigned as a proxy for up to 2 users. Currently assigned: {current_proxy_count}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        updated_voters = []
+
+        for voter_id in incoming_ids:
+            try:
+                requested_user = CustomUser.objects.get(id=voter_id)
+            except CustomUser.DoesNotExist:
+                return Response({"error": f"Voter with ID {voter_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            requested_user.allow_proxy = True
+            requested_user.proxy_id = user.id
+            requested_user.save()
+            updated_voters.append(voter_id)
+
+        return Response({"message": "Proxy request(s) accepted.", "updated_voter_ids": updated_voters}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": "An unexpected error occurred.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def remove_proxy_assignments(request):
+    try:
+        voter_data = request.data
+
+        if not isinstance(voter_data, list):
+            return Response({"error": "Request body must be a list of voter ID objects."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        incoming_ids = {item['id'] for item in voter_data if 'id' in item}
+
+        updated_voters = []
+
+        for voter_id in incoming_ids:
+            try:
+                voter = CustomUser.objects.get(id=voter_id)
+            except CustomUser.DoesNotExist:
+                continue  # Skip if not found
+
+            # Only remove if the logged-in user is currently the proxy
+            if voter.proxy_id == user.id:
+                voter.allow_proxy = False
+                voter.proxy_id = None
+                voter.save()
+                updated_voters.append(voter_id)
+
+        return Response(
+            {"message": "Proxy assignments removed.", "updated_voter_ids": updated_voters},
+            status=status.HTTP_200_OK
+        )
+
+    except Exception as e:
+        return Response(
+            {"error": "An unexpected error occurred.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_proxied_users(request):
+    try:
+        user = request.user
+        proxied_users = CustomUser.objects.filter(proxy_id=user.id)
+
+        serializer = CustomUserSerializer(proxied_users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     except Exception as e:
         return Response(
