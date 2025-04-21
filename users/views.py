@@ -40,6 +40,15 @@ def get_all_voters(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+def get_all_committees(request):
+    # Filter users who have the 'voter' role
+    voters = CustomUser.objects.filter(role__id__in=[2])
+    serializer = CustomUserSerializer(
+        voters, many=True)  # Serialize filtered users
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def request_proxy(request):
