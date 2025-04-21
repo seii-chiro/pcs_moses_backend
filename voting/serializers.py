@@ -1,16 +1,11 @@
 from rest_framework import serializers
-from .models import Vote
 
-class VoteSerializer(serializers.ModelSerializer):
-    candidate_id = serializers.IntegerField(required=True)
+class VoteSerializer(serializers.Serializer):
+    candidate_id = serializers.ListField(
+        child=serializers.IntegerField(), required=True
+    )
     voter_id = serializers.IntegerField(required=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    voted_at = serializers.DateTimeField(required=False)
 
-    class Meta:
-        model = Vote
-        fields = [
-
-            'candidate_id',
-            'notes',
-            'voted_at',
-            'voter_id'
-        ]
+    # No Meta class needed since this isn't tied to a single Vote instance

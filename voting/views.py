@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Vote
 from .serializers import VoteSerializer
-from users.models import CustomUser  # Replace with your actual user import
+from users.models import CustomUser  # Adjust if needed
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -14,19 +14,41 @@ def create_vote(request):
         if serializer.is_valid():
             user = request.user
             voter_id = serializer.validated_data['voter_id']
-            candidate_id = serializer.validated_data['candidate_id']
+            candidate_ids = serializer.validated_data['candidate_id']  # Now a list
             notes = serializer.validated_data.get('notes', '')
             voted_at = serializer.validated_data.get('voted_at')
+
+            if not isinstance(candidate_ids, list):
+                return Response({"error": "candidate_id must be a list of candidate IDs."},
+                                status=status.HTTP_400_BAD_REQUEST)
 
             try:
                 voter = CustomUser.objects.get(id=voter_id)
             except CustomUser.DoesNotExist:
                 return Response({"error": "Voter not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Check if vote already exists for the voter
-            if Vote.objects.filter(voter_id=voter_id).exists():
+            # Count total votes already cast by this voter
+            total_votes = Vote.objects.filter(voter_id=voter_id).count()
+            if total_votes >= 10:
                 return Response(
-                    {"error": "This voter has already cast a vote."},
+                    {"error": "This voter has already cast the maximum number of votes (10)."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if total_votes + len(candidate_ids) > 10:
+                return Response(
+                    {"error": f"You can only vote {10 - total_votes} more time(s)."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check if voter already voted for any of the selected candidates
+            existing_votes = Vote.objects.filter(
+                voter_id=voter_id, candidate_id__in=candidate_ids
+            ).values_list('candidate_id', flat=True)
+
+            if existing_votes:
+                return Response(
+                    {"error": f"You have already voted for candidate(s): {list(existing_votes)}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -44,21 +66,26 @@ def create_vote(request):
                     )
                 proxy_for_voter_id = user.id
             else:
-                proxy_for_voter_id = None  # self-vote
+                proxy_for_voter_id = None
 
-            vote = Vote.objects.create(
-                voter_id=voter_id,
-                proxy_for_voter_id=proxy_for_voter_id,
-                candidate_id=candidate_id,
-                notes=notes,
-                voted_at=voted_at,
-                created_by=user.username,
-                updated_by=user.username,
-            )
+            # Create all votes
+            votes = []
+            for cid in candidate_ids:
+                votes.append(Vote(
+                    voter_id=voter_id,
+                    proxy_for_voter_id=proxy_for_voter_id,
+                    candidate_id=cid,
+                    notes=notes,
+                    voted_at=voted_at,
+                    created_by=user.username,
+                    updated_by=user.username,
+                ))
+            Vote.objects.bulk_create(votes)
 
-            return Response({"message": "Vote created successfully.", "vote_id": vote.id}, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": f"Votes created for {len(candidate_ids)} candidate(s)."},
+                            status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
         return Response(
