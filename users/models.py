@@ -5,6 +5,27 @@ from django.utils import timezone
 from django.conf import settings
 
 
+class Vote(models.Model):
+    voted_at = models.DateTimeField(null=True, blank=True)
+    voter_id = models.IntegerField(default=0)
+    proxy_for_voter_id = models.IntegerField(default=0)
+    candidate_id = models.IntegerField(default=0)
+    notes = models.TextField(default='', blank=True)
+    is_counted = models.BooleanField(default=False)
+    counted_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.CharField(max_length=50, null=True, blank=True)
+    updated_by = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    record_status_id = models.IntegerField(default=1)
+
+    class Meta:
+        db_table = 'votes'
+
+    def __str__(self):
+        return f"Vote #{self.id} by Voter {self.voter_id}"
+
+
 class Role(models.Model):
     role_name = models.CharField(max_length=50, unique=True)
     role_level = models.IntegerField()
@@ -60,32 +81,6 @@ class CustomUser(AbstractUser):
     proxy_id = models.IntegerField(null=True, blank=True)
     is_accepted = models.BooleanField(default=False)
     image_base64 = models.TextField(null=True, blank=True)
-
-    # class Role(models.TextChoices):
-    #     ADMIN = "admin", "Admin"
-    #     VOTER = "voter", "Voter"
-    #     ELECOM = "elecom", "Elecom"
-
-    # role = models.CharField(
-    #     max_length=10,
-    #     choices=Role.choices,
-    #     default=Role.VOTER,
-    # )
-
-    # def save(self, *args, **kwargs):
-    #     # Generate full_name if not provided
-    #     if not self.full_name and (self.first_name or self.last_name):
-    #         title_part = f"{self.title} " if self.title else ""
-    #         first_part = f"{self.first_name} " if self.first_name else ""
-    #         middle_initial = f"{self.middle_name[0]}. " if self.middle_name else ""
-    #         self.full_name = f"{title_part}{first_part}{middle_initial}{self.last_name}".strip(
-    #         )
-
-    #     # Check if the password is not hashed and only then hash it
-    #     if self.pk and self.password and not self.password.startswith('pbkdf2'):
-    #         self.set_password(self.password)
-
-    #     super().save(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         # Extract update_password parameter or default to True
