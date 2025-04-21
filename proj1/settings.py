@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -143,7 +144,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/static/'
+MEDIA_URL = '/static/media/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -165,3 +170,28 @@ CORS_ALLOWED_ORIGINS = [
     "https://your-nextjs-app.com",  # Production domain
     "http://localhost:5173",       # Local development domain
 ]
+
+
+# Django deploy check
+# manage.py check --deploy
+# SECURITY WARNING: update this with your domain name or IP
+# ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com', 'localhost']
+
+# # Strong and long secret key (at least 50 chars, random)
+# SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'your-super-long-and-random-secret-key')
+
+# # Enforce HTTPS
+# SECURE_SSL_REDIRECT = True
+
+# # HTTP Strict Transport Security
+# SECURE_HSTS_SECONDS = 31536000  # 1 year
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# SECURE_HSTS_PRELOAD = True
+
+# # Secure cookies
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+
+# # Other recommended settings
+# SECURE_BROWSER_XSS_FILTER = True
+# SECURE_CONTENT_TYPE_NOSNIFF = True
