@@ -3,15 +3,33 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.timezone import now
+from election.models import Election
 from users.serializers import CustomUserSerializer
 from .models import Vote
 from .serializers import VoteSerializer
 from users.models import CustomUser
+from django.utils import timezone
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_vote(request):
     try:
+        # Check if there's an election
+        election = Election.objects.first()
+        if not election:
+            return Response(
+                {"error": "No election found. Please contact the election committee."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if the election is open
+        now = timezone.now()
+        if not (election.poll_open_at and election.poll_closed_at and election.poll_open_at <= now < election.poll_closed_at):
+            return Response(
+                {"error": "Voting is currently closed. Please check the election schedule."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = VoteSerializer(data=request.data)
         if serializer.is_valid():
             user = request.user
@@ -171,6 +189,8 @@ def accept_requested_proxy(request):
             {"error": "An unexpected error occurred.", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def remove_proxy_assignments(request):
