@@ -9,6 +9,7 @@ from .models import Vote
 from .serializers import VoteSerializer
 from users.models import CustomUser
 from django.utils import timezone
+from django.db.models import Count, Q
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -331,5 +332,31 @@ def request_proxy_access(request):
     except Exception as e:
         return Response(
             {"error": "An unexpected error occurred.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def candidate_vote_summary(request):
+    try:
+        # Get users with role.id 6 or 7
+        candidates = CustomUser.objects.filter(role__id__in=[6, 7]).annotate(
+            total_votes=Count('id', filter=Q(id__in=Vote.objects.values_list('candidate_id', flat=True)))
+        )
+
+        results = []
+        for candidate in candidates:
+            results.append({
+                "candidate_id": candidate.id,
+                "name": f"{candidate.first_name} {candidate.last_name}",
+                "total_votes": candidate.total_votes
+            })
+
+        return Response(results, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": "An error occurred while generating vote summary.", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
