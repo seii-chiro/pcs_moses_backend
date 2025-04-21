@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include("api.urls")),
     path('api/', include("users.urls")),
-    path('api/', include("voting.urls")),
+    path('api/vote/', include("voting.urls")),
+    path('api/election/', include("election.urls")),
     path('api/token-auth/', obtain_auth_token),
 ]
