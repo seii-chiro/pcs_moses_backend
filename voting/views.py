@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
+from django.utils.timezone import now
 from users.serializers import CustomUserSerializer
 from .models import Vote
 from .serializers import VoteSerializer
@@ -106,20 +106,20 @@ def accept_requested_proxy(request):
         user = request.user
         proxy_requests = user.received_proxy_requests or []
 
-        # Extract requested voter IDs from received_proxy_requests
-        requested_ids = {item['id'] for item in proxy_requests if 'id' in item}
+        # Extract existing request IDs
+        existing_request_ids = {item.get('id') for item in proxy_requests if 'id' in item}
 
-        # Extract voter IDs from request
-        incoming_ids = {item['id'] for item in voter_data if 'id' in item}
+        # Extract incoming IDs
+        incoming_ids = {item.get('id') for item in voter_data if 'id' in item}
 
         # Validate all incoming IDs exist in received_proxy_requests
-        if not incoming_ids.issubset(requested_ids):
+        if not incoming_ids.issubset(existing_request_ids):
             return Response(
                 {"error": "One or more voter IDs are not found in your received proxy requests."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check if assigning would exceed max of 2 proxy relationships
+        # Check proxy limit
         current_proxy_count = CustomUser.objects.filter(proxy_id=user.id).count()
         if current_proxy_count + len(incoming_ids) > 2:
             return Response(
@@ -129,26 +129,48 @@ def accept_requested_proxy(request):
 
         updated_voters = []
 
-        for voter_id in incoming_ids:
+        for item in voter_data:
+            voter_id = item.get('id')
+            if not voter_id:
+                continue
+
             try:
                 requested_user = CustomUser.objects.get(id=voter_id)
             except CustomUser.DoesNotExist:
                 return Response({"error": f"Voter with ID {voter_id} not found."}, status=status.HTTP_404_NOT_FOUND)
 
+            # Accept proxy
             requested_user.allow_proxy = True
             requested_user.proxy_id = user.id
             requested_user.save()
             updated_voters.append(voter_id)
 
-        return Response({"message": "Proxy request(s) accepted.", "updated_voter_ids": updated_voters}, status=status.HTTP_200_OK)
+            # Update or append in received_proxy_requests
+            updated = False
+            for req in proxy_requests:
+                if req.get("id") == voter_id:
+                    req["status"] = "accepted"
+                    req["date_accepted"] = now().isoformat()
+                    updated = True
+                    break
+
+            if not updated:
+                proxy_requests.append({
+                    "id": voter_id,
+                    "status": "accepted",
+                    "date_accepted": now().isoformat()
+                })
+
+        user.received_proxy_requests = proxy_requests
+        user.save()
+
+        return Response({"message": "Proxy request(s) accepted and updated.", "updated_voter_ids": updated_voters}, status=status.HTTP_200_OK)
 
     except Exception as e:
         return Response(
             {"error": "An unexpected error occurred.", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def remove_proxy_assignments(request):
@@ -198,6 +220,74 @@ def get_my_proxied_users(request):
 
         serializer = CustomUserSerializer(proxied_users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": "An unexpected error occurred.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def request_proxy_access(request):
+    try:
+        data = request.data
+
+        if not isinstance(data, dict):
+            return Response(
+                {"error": "Request body must be a dictionary with 'proxy_id' and 'reason'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        proxy_id = data.get('proxy_id')
+        reason = data.get('reason', '')
+
+        if not isinstance(proxy_id, int):
+            return Response(
+                {"error": "'proxy_id' must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        current_datetime = now().isoformat()
+
+        try:
+            proxy_user = CustomUser.objects.get(id=proxy_id)
+        except CustomUser.DoesNotExist:
+            return Response(
+                {"error": f"User with ID {proxy_id} not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Build the request payload
+        request_payload = {
+            "id": user.id,
+            "first_name": user.first_name,
+            "middle_name": user.middle_name,
+            "last_name": user.last_name,
+            "status": "pending",
+            "date_assigned": current_datetime,
+            "reason": reason
+        }
+
+        current_requests = proxy_user.received_proxy_requests or []
+
+        # Prevent duplicate requests
+        if any(req.get("id") == user.id for req in current_requests):
+            return Response(
+                {"error": "You have already sent a proxy request to this user."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        current_requests.append(request_payload)
+        proxy_user.received_proxy_requests = current_requests
+        proxy_user.save()
+
+        return Response(
+            {"message": f"Proxy request sent to user ID {proxy_id}."},
+            status=status.HTTP_200_OK
+        )
 
     except Exception as e:
         return Response(
