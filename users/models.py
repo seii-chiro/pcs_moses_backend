@@ -81,6 +81,8 @@ class CustomUser(AbstractUser):
     proxy_id = models.IntegerField(null=True, blank=True)
     is_accepted = models.BooleanField(default=False)
     image_base64 = models.TextField(null=True, blank=True)
+    started_voting = models.DateTimeField(null=True, blank=True)
+    finished_voting = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         # Extract update_password parameter or default to True

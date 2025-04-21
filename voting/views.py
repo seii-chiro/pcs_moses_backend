@@ -118,6 +118,10 @@ def create_vote(request):
                 )
                 created_votes.append(vote.id)
 
+            # Set finished_voting timestamp
+            voter.finished_voting = timezone.now()
+            voter.save(update_fields=['finished_voting'])
+
             return Response(
                 {"message": "Votes created successfully.", "vote_ids": created_votes},
                 status=status.HTTP_201_CREATED
@@ -358,5 +362,79 @@ def candidate_vote_summary(request):
     except Exception as e:
         return Response(
             {"error": "An error occurred while generating vote summary.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def casted_ballot_summary(request):
+    try:
+        # Get all unique voter_ids who cast at least one vote
+        unique_voter_ids = Vote.objects.values_list('voter_id', flat=True).distinct()
+        total_casted_ballots = unique_voter_ids.count()
+
+        # Get the first election if available
+        election = Election.objects.first()
+        if election:
+            no_slots = election.no_slots
+            no_ballots = election.no_ballots
+        else:
+            no_slots = None
+            no_ballots = None
+
+        # Count users who started voting but haven't finished
+        abandoned_held_ballot = CustomUser.objects.filter(
+            started_voting__isnull=False,
+            finished_voting__isnull=True
+        ).count()
+
+        return Response(
+            {
+                "total_casted_ballots": total_casted_ballots,
+                "no_slots": no_slots,
+                "no_ballots": no_ballots,
+                "abandoned_held_ballot": abandoned_held_ballot
+            },
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return Response(
+            {"error": "Failed to retrieve casted ballot summary.", "details": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def set_started_vote(request):
+    try:
+        voter_id = request.data.get('voter_id')
+        if not voter_id:
+            return Response(
+                {"error": "voter_id is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            voter = CustomUser.objects.get(id=voter_id)
+        except CustomUser.DoesNotExist:
+            return Response(
+                {"error": f"User with id {voter_id} not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        voter.started_voting = timezone.now()
+        voter.save()
+
+        return Response(
+            {"message": f"Started voting timestamp set for voter ID {voter_id}."},
+            status=status.HTTP_200_OK
+        )
+
+    except Exception as e:
+        return Response(
+            {"error": "An unexpected error occurred.", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
