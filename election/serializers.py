@@ -14,9 +14,9 @@ class ElectionSerializer(serializers.ModelSerializer):
     def get_is_open(self, obj):
         now = timezone.now()
         return (
-            obj.poll_open_at is not None and
-            obj.poll_closed_at is not None and
-            obj.poll_open_at <= now < obj.poll_closed_at
+            obj.voting_start is not None and
+            obj.voting_end is not None and
+            obj.voting_start <= now < obj.voting_end
         )
 
 
