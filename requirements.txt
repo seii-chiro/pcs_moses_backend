@@ -16,3 +16,4 @@ pytz
 argon2
 argon2-cffi
 gunicorn
+drf-api-logger
