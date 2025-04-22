@@ -2,7 +2,7 @@ import csv
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from users.models import CustomUser, Role
-from django.db import transaction
+from django.db import transaction, connection
 
 
 class Command(BaseCommand):
@@ -93,11 +93,9 @@ class Command(BaseCommand):
                                 user.updated_at = updated_at
                                 user.record_status_id = record_status_id
 
-                                # Use the _password field directly to bypass hashing
                                 if password:
                                     user.password = password
 
-                                # Skip password hashing
                                 user.save(update_password=False)
                                 updated_count += 1
                                 self.stdout.write(f"Updated user: {username}")
@@ -125,11 +123,9 @@ class Command(BaseCommand):
                                     record_status_id=record_status_id
                                 )
 
-                                # Set password directly
                                 if password:
                                     user.password = password
 
-                                # Skip password hashing
                                 user.save(update_password=False)
                                 created_count += 1
                                 self.stdout.write(f"Created user: {username}")
