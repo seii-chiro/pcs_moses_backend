@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'api',
     'rest_framework.authtoken',
     'corsheaders',
+    'drf_api_logger',
     'users',
     'voting',
     'election',
@@ -59,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'drf_api_logger.middleware.api_logger_middleware.APILoggerMiddleware',
 ]
 
 ROOT_URLCONF = 'proj1.urls'
@@ -205,3 +207,9 @@ BACKUP_FRONTEND_FILE_PATH = '/home/tambuli/projects/visitor_management_system_ap
 UBUNTU_PASS = ''
 NAME_OF_NGINX_CONFIG_FILE = 'marine_front_end'
 NAME_OF_SITE = 'moses.ph'
+
+
+# Logs
+DRF_API_LOGGER_DATABASE = True
+DRF_API_LOGGER_SLOW_API_ABOVE = 500
+DRF_API_LOGGER_EXCLUDE_KEYS = ['password', 'token', 'Token', 'AUTHORIZATION','access', 'refresh']
