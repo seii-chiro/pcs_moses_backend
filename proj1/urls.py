@@ -24,5 +24,6 @@ urlpatterns = [
     path('api/', include("users.urls")),
     path('api/vote/', include("voting.urls")),
     path('api/election/', include("election.urls")),
+    path('', include("frontend_helper.urls")),
     path('api/token-auth/', obtain_auth_token),
 ]
