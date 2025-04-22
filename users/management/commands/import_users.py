@@ -140,6 +140,14 @@ class Command(BaseCommand):
                                 f"Error processing row {row[0] if len(row) > 0 else 'unknown'}: {str(e)}"))
                             raise  # Re-raise to trigger the transaction rollback
 
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT setval(pg_get_serial_sequence('users_customuser', 'id'), (SELECT MAX(id) FROM users_customuser))"
+                )
+                self.stdout.write(self.style.SUCCESS(
+                    "PostgreSQL ID sequence synchronized."))
+
         except Exception as e:
             self.stdout.write(self.style.ERROR(
                 f"Failed to import users: {str(e)}"))
