@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'voting',
-    'election'
+    'election',
+    'frontend_helper',
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -159,7 +160,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.BasicAuthentication',
-        # 'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     #     'DEFAULT_PERMISSION_CLASSES': [
     #         'rest_framework.permissions.IsAuthenticated',
@@ -195,3 +196,12 @@ CORS_ALLOWED_ORIGINS = [
 # # Other recommended settings
 # SECURE_BROWSER_XSS_FILTER = True
 # SECURE_CONTENT_TYPE_NOSNIFF = True
+
+
+# Frontendhelper portal
+ENABLE_FRONTEND_HELPER = True
+FRONTEND_FILE_PATH = '/home/tambuli/projects/visitor_management_system_api/test_front/actual'
+BACKUP_FRONTEND_FILE_PATH = '/home/tambuli/projects/visitor_management_system_api/test_front/backup'
+UBUNTU_PASS = ''
+NAME_OF_NGINX_CONFIG_FILE = 'marine_front_end'
+NAME_OF_SITE = 'moses.ph'
